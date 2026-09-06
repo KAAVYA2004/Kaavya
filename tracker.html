@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Export Desk</title>
+<style>
+  :root{
+    --ink:#1c1a17;
+    --ink-soft:#5c5750;
+    --ink-faint:#948e84;
+    --paper:#faf7f2;
+    --paper-raised:#ffffff;
+    --line:#e4ddd2;
+    --line-strong:#cfc5b4;
+    --brass:#9c7a3c;
+    --brass-soft:#e9dcc0;
+    --brass-fill:#b8934f;
+    --pending:#a85d3a;
+    --pending-bg:#f6e5db;
+    --process:#2f6f8f;
+    --process-bg:#dcebf1;
+    --hold:#8a6d1f;
+    --hold-bg:#f3ead0;
+    --done:#3c6e4f;
+    --done-bg:#e0ebe2;
+    --danger:#a3392f;
+    --danger-bg:#f7e2df;
+    --radius:10px;
+    --font-serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --font-sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono: "SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* header */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;margin-bottom:20px;
+    flex-wrap:wrap;gap:10px;
+  }
+  .masthead h1{
+    font-family:var(--font-serif);
+    font-weight:400;
+    font-size:30px;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  .masthead .sub{
+    font-size:13px;color:var(--ink-soft);margin-top:2px;
+  }
+  .today{
+    font-size:13px;color:var(--ink-soft);text-align:right;
+  }
+  .today strong{color:var(--ink);font-weight:600;}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--line);}
+  .tab{
+    padding:10px 18px;font-size:14px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    user-select:none;
+  }
+  .tab.active{color:var(--ink);border-bottom-color:var(--brass-fill);}
+  .tab:hover{color:var(--ink);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* summary strip */
+  .summary{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+  .sum-card{
+    flex:1;min-width:130px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:12px 16px;
+  }
+  .sum-card .n{font-family:var(--font-serif);font-size:26px;line-height:1;}
+  .sum-card .l{font-size:11.5px;color:var(--ink-soft);margin-top:4px;letter-spacing:0.2px;}
+  .sum-card.pending .n{color:var(--pending);}
+  .sum-card.process .n{color:var(--process);}
+  .sum-card.hold .n{color:var(--hold);}
+  .sum-card.done .n{color:var(--done);}
+  .sum-card.overdue .n{color:var(--danger);}
+
+  /* form panel */
+  .panel{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;margin-bottom:22px;
+  }
+  .panel h2{font-family:var(--font-serif);font-weight:400;font-size:17px;margin:0 0 14px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+  .field label{
+    display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;
+    letter-spacing:0.2px;
+  }
+  input,select,textarea{
+    width:100%;
+    font-family:var(--font-sans);
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line-strong);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:var(--brass-fill);
+    box-shadow:0 0 0 3px var(--brass-soft);
+  }
+  textarea{resize:vertical;min-height:60px;font-family:var(--font-sans);}
+  .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;}
+  button{
+    font-family:var(--font-sans);
+    font-size:13.5px;font-weight:600;
+    padding:9px 18px;
+    border-radius:6px;
+    cursor:pointer;
+    border:1px solid var(--line-strong);
+    background:var(--paper-raised);
+    color:var(--ink);
+  }
+  button:hover{background:var(--paper);}
+  button.primary{
+    background:var(--ink);color:#fff;border-color:var(--ink);
+  }
+  button.primary:hover{background:#33302b;}
+  button.danger-ghost{border-color:transparent;color:var(--danger);background:none;padding:6px 8px;font-size:12px;}
+  button.danger-ghost:hover{background:#f6e6e3;}
+  .error{color:var(--danger);font-size:12.5px;margin-top:6px;display:none;}
+
+  /* filter row */
+  .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .filter-row input[type=text]{max-width:240px;}
+  .chip{
+    font-size:12.5px;padding:6px 13px;border-radius:99px;border:1px solid var(--line-strong);
+    cursor:pointer;color:var(--ink-soft);background:var(--paper-raised);font-weight:600;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{
+    text-align:left;font-size:11px;letter-spacing:0.3px;color:var(--ink-soft);
+    padding:8px 10px;border-bottom:1px solid var(--line-strong);font-weight:600;
+  }
+  tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:hover{background:#f4efe6;}
+  .ref{font-family:var(--font-mono);font-size:12.5px;color:var(--ink);}
+  .client-name{font-weight:600;}
+  .status-badge{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;
+    cursor:pointer;border:none;
+  }
+  .status-badge.PENDING{background:var(--pending-bg);color:var(--pending);}
+  .status-badge.PROCESS{background:var(--process-bg);color:var(--process);}
+  .status-badge.HOLD{background:var(--hold-bg);color:var(--hold);}
+  .status-badge.DONE{background:var(--done-bg);color:var(--done);}
+  .age{font-size:11.5px;color:var(--ink-faint);}
+  .age.warn{color:var(--pending);font-weight:600;}
+  .row-actions{display:flex;gap:2px;}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--ink-faint);font-size:13.5px;
+  }
+  .empty i{display:block;font-size:26px;margin-bottom:8px;}
+
+  /* call log specific */
+  .client-picker{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .client-pill{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 14px;border-radius:99px;border:1px solid var(--line-strong);
+    background:var(--paper-raised);cursor:pointer;font-size:13.5px;font-weight:600;
+  }
+  .client-pill .count{
+    background:var(--brass-soft);color:var(--brass);
+    font-size:11px;padding:2px 7px;border-radius:99px;font-weight:700;
+  }
+  .client-pill.active{border-color:var(--ink);background:var(--ink);color:#fff;}
+  .client-pill.active .count{background:rgba(255,255,255,0.2);color:#fff;}
+
+  .client-refs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--paper-raised);}
+  .client-refs-label{font-size:12.5px;font-weight:700;color:var(--muted,#888);}
+  .ref-pill{font-size:11.5px;padding:3px 9px;border-radius:99px;font-weight:700;}
+
+  .thread{border-left:2px solid var(--line-strong);margin-left:6px;padding-left:20px;}
+  .call-entry{position:relative;padding-bottom:22px;}
+  .call-entry::before{
+    content:"";position:absolute;left:-25px;top:4px;
+    width:9px;height:9px;border-radius:50%;background:var(--brass-fill);
+    border:2px solid var(--paper);
+  }
+  .call-entry .meta{font-size:12px;color:var(--ink-soft);margin-bottom:4px;display:flex;gap:10px;align-items:center;}
+  .call-entry .call-num{
+    font-family:var(--font-mono);font-size:11px;color:var(--brass);
+    background:var(--brass-soft);padding:1px 7px;border-radius:5px;font-weight:700;
+  }
+  .call-entry .desc{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;
+    padding:11px 14px;font-size:14px;line-height:1.55;color:var(--ink);
+  }
+  .call-entry .desc-actions{margin-top:6px;display:flex;gap:12px;}
+  .call-entry .desc-actions span{font-size:11.5px;color:var(--ink-faint);cursor:pointer;font-weight:600;}
+  .call-entry .desc-actions span:hover{color:var(--danger);}
+
+  .empty-callstate{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+
+  select.status-select{
+    -webkit-appearance:none;appearance:none;
+    font-size:11.5px;font-weight:700;
+    background-position:right 8px center;
+    padding-right:26px;
+  }
+
+  @media (max-width:640px){
+    thead{display:none;}
+    table,tbody,tr,td{display:block;width:100%;}
+    tbody tr{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;padding:6px 10px;background:var(--paper-raised);}
+    tbody td{border:none;padding:6px 2px;display:flex;justify-content:space-between;gap:10px;align-items:center;}
+    tbody td::before{content:attr(data-label);font-size:10.5px;color:var(--ink-faint);font-weight:700;letter-spacing:0.3px;}
+    tbody td.no-label::before{content:none;}
+  }
+</style>
+<script type="application/json" id="appDataStore">{"entries":[],"calls":[]}</script>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <h1>Export Desk</h1>
+      <div class="sub">Quotation &amp; PI tracker · client call log</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="today">Today · <strong id="todayLabel"></strong></div>
+      <div style="display:flex;gap:6px;">
+        <button id="notifyBtn" title="Turn on due-date notifications" style="padding:8px 12px;font-size:12.5px;"><i class="ti ti-bell" style="font-size:15px;vertical-align:-2px;margin-right:4px;"></i>Notify</button>
+        <button id="backupBtn" title="Download a backup file" style="padding:8px 12px;font-size:12.5px;"><i class="ti ti-download" style="font-size:15px;vertical-align:-2px;margin-right:4px;"></i>Backup</button>
+        <button id="restoreBtn" title="Restore from a backup file" style="padding:8px 12px;font-size:12.5px;"><i class="ti ti-upload" style="font-size:15px;vertical-align:-2px;margin-right:4px;"></i>Restore</button>
+        <input type="file" id="restoreFile" accept=".json" style="display:none;">
+      </div>
+    </div>
+  </div>
+  <div id="notifyStatus" style="font-size:12px;color:var(--ink-soft);text-align:right;margin:-14px 0 16px;display:none;"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="tracker">Order tracker</div>
+    <div class="tab" data-tab="calls">Client calls</div>
+  </div>
+
+  <!-- ===================== TRACKER VIEW ===================== -->
+  <div class="view active" id="view-tracker">
+
+    <div class="summary" id="summaryStrip"></div>
+
+    <div class="panel">
+      <h2>Add entry</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="f-date">Assigned date</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="field">
+          <label for="f-due">Due date (optional)</label>
+          <input type="date" id="f-due">
+        </div>
+        <div class="field">
+          <label for="f-ref">PI / quotation no.</label>
+          <input type="text" id="f-ref" placeholder="e.g. QTN-0142">
+        </div>
+        <div class="field">
+          <label for="f-client">Client name</label>
+          <input type="text" id="f-client" placeholder="e.g. Al Fahad Trading">
+        </div>
+        <div class="field">
+          <label for="f-priority">Priority</label>
+          <select id="f-priority">
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-status">Status</label>
+          <select id="f-status">
+            <option value="PENDING">Pending</option>
+            <option value="PROCESS">In process</option>
+            <option value="HOLD">On hold</option>
+            <option value="DONE">Done</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:1/-1;">
+          <label for="f-note">Remarks (optional)</label>
+          <input type="text" id="f-note" placeholder="e.g. awaiting LC confirmation">
+        </div>
+      </div>
+      <div class="error" id="f-error">Add a PI / quotation number and client name.</div>
+      <div class="actions">
+        <button class="primary" id="addEntryBtn">Add to tracker</button>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <div class="chip active" data-filter="ALL">All</div>
+      <div class="chip" data-filter="PENDING">Pending</div>
+      <div class="chip" data-filter="PROCESS">In process</div>
+      <div class="chip" data-filter="HOLD">On hold</div>
+      <div class="chip" data-filter="DONE">Done</div>
+      <input type="text" id="searchBox" placeholder="Search client or ref…">
+    </div>
+
+    <table id="trackerTable">
+      <thead>
+        <tr>
+          <th>Assigned</th>
+          <th>PI / quotation</th>
+          <th>Client</th>
+          <th>Priority</th>
+          <th>Remarks</th>
+          <th>Due</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="trackerBody"></tbody>
+    </table>
+    <div class="empty" id="trackerEmpty" style="display:none;">
+      <i class="ti ti-clipboard-list"></i>Nothing here yet. Add your first PI or quotation above.
+    </div>
+  </div>
+
+  <!-- ===================== CALLS VIEW ===================== -->
+  <div class="view" id="view-calls">
+
+    <div class="panel">
+      <h2>Log a call</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="c-client">Client name</label>
+          <input type="text" id="c-client" placeholder="e.g. Al Fahad Trading" list="clientList">
+          <datalist id="clientList"></datalist>
+        </div>
+        <div class="field">
+          <label for="c-date">Date</label>
+          <input type="date" id="c-date">
+        </div>
+        <div class="field">
+          <label for="c-status">Follow-up status</label>
+          <select id="c-status">
+            <option value="HOLD">To be done</option>
+            <option value="PENDING" selected>Pending</option>
+            <option value="DONE">Done</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="c-desc">What was discussed</label>
+        <textarea id="c-desc" placeholder="e.g. Confirmed pricing for 2 containers, they'll revert by Friday with PO"></textarea>
+      </div>
+      <div class="error" id="c-error">Add a client name and what was discussed.</div>
+      <div class="actions">
+        <button class="primary" id="addCallBtn">Log call</button>
+      </div>
+    </div>
+
+    <div class="client-picker" id="clientPicker"></div>
+
+    <div class="filter-row" id="callFilterRow" style="display:none;">
+      <div class="chip active" data-callfilter="ALL">All</div>
+      <div class="chip" data-callfilter="HOLD">To be done</div>
+      <div class="chip" data-callfilter="PENDING">Pending</div>
+      <div class="chip" data-callfilter="DONE">Done</div>
+    </div>
+
+    <div id="clientRefsWrap"></div>
+    <div id="callThreadWrap"></div>
+    <div class="empty-callstate" id="callsEmpty" style="display:none;">
+      <i class="ti ti-phone" style="font-size:26px;display:block;margin-bottom:8px;"></i>
+      No calls logged yet. Log your first call above.
+    </div>
+  </div>
+
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+
+<script>
+const STORAGE_KEY = 'export-desk-data-v1';
+let state = { entries: [], calls: [] };
+let activeFilter = 'ALL';
+let activeClient = null;
+
+function uid(){ return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2,8); }
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' });
+}
+function daysSince(iso){
+  if(!iso) return null;
+  const d = new Date(iso + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((now - d) / 86400000);
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function readEmbeddedData(){
+  try{
+    const el = document.getElementById('appDataStore');
+    if(!el) return null;
+    const parsed = JSON.parse(el.textContent);
+    if((parsed.entries && parsed.entries.length) || (parsed.calls && parsed.calls.length)){
+      return parsed;
+    }
+    return null;
+  }catch(e){ return null; }
+}
+
+async function loadState(){
+  try{
+    // 1. This browser's local storage — the primary, automatic store.
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state.entries = parsed.entries || [];
+      state.calls = parsed.calls || [];
+    } else {
+      // 2. Nothing in this browser yet — fall back to data embedded in the
+      //    file itself (present if this exact file was ever downloaded as a backup)
+      //    or, if running inside Claude, the artifact preview storage.
+      const embedded = readEmbeddedData();
+      if(embedded){
+        state.entries = embedded.entries || [];
+        state.calls = embedded.calls || [];
+      } else if(window.storage && window.storage.get){
+        const res = await window.storage.get(STORAGE_KEY);
+        if(res && res.value){
+          const parsed = JSON.parse(res.value);
+          state.entries = parsed.entries || [];
+          state.calls = parsed.calls || [];
+        }
+      }
+    }
+  }catch(e){
+    console.log('No existing data yet, starting fresh.');
+  }
+  render();
+}
+
+async function saveState(){
+  const payload = JSON.stringify({ entries: state.entries, calls: state.calls });
+  // Keep the in-page data block current too, so a downloaded copy of this
+  // file (via Backup, or Save Page As) already contains today's data.
+  const el = document.getElementById('appDataStore');
+  if(el) el.textContent = payload;
+
+  let ok = false;
+  try{
+    localStorage.setItem(STORAGE_KEY, payload);
+    ok = true;
+  }catch(e){
+    console.error('localStorage save failed', e);
+  }
+  // Also mirror into Claude's artifact storage when running inside Claude — harmless elsewhere.
+  try{
+    if(window.storage && window.storage.set){
+      await window.storage.set(STORAGE_KEY, payload);
+      ok = true;
+    }
+  }catch(e){ /* not running inside an artifact preview — ignore */ }
+
+  showSaveStatus(ok);
+}
+
+function showSaveStatus(ok){
+  let el = document.getElementById('saveStatus');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'saveStatus';
+    el.style.cssText = 'font-size:11.5px;color:var(--muted,#888);margin-top:4px;';
+    const today = document.querySelector('.today');
+    if(today && today.parentNode) today.parentNode.insertBefore(el, today.nextSibling);
+  }
+  const time = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  el.textContent = ok ? ('Autosaved to this browser · ' + time) : 'Autosave failed — use Backup to save a copy';
+  el.style.color = ok ? 'var(--muted,#888)' : '#c0392b';
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------------- tracker: add entry ---------------- */
+document.getElementById('addEntryBtn').addEventListener('click', async () => {
+  const date = document.getElementById('f-date').value || todayISO();
+  const due = document.getElementById('f-due').value || null;
+  const ref = document.getElementById('f-ref').value.trim();
+  const client = document.getElementById('f-client').value.trim();
+  const priority = document.getElementById('f-priority').value;
+  const status = document.getElementById('f-status').value;
+  const note = document.getElementById('f-note').value.trim();
+  const err = document.getElementById('f-error');
+
+  if(!ref || !client){
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  state.entries.unshift({ id: uid(), date, due, ref, client, priority, status, note, createdAt: Date.now(), notified: false });
+  await saveState();
+
+  document.getElementById('f-ref').value = '';
+  document.getElementById('f-client').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-status').value = 'PENDING';
+  document.getElementById('f-priority').value = 'Medium';
+  document.getElementById('f-date').value = todayISO();
+  document.getElementById('f-due').value = '';
+
+  render();
+});
+
+async function updateStatus(id, newStatus){
+  const e = state.entries.find(x => x.id === id);
+  if(e){ e.status = newStatus; await saveState(); render(); }
+}
+async function deleteEntry(id){
+  state.entries = state.entries.filter(x => x.id !== id);
+  await saveState(); render();
+}
+
+/* ---------------- filters ---------------- */
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+document.getElementById('searchBox').addEventListener('input', render);
+
+/* ---------------- render: tracker ---------------- */
+function isOverdue(e){
+  if(e.status === 'DONE' || !e.due) return false;
+  return e.due < todayISO();
+}
+
+function renderSummary(){
+  const counts = { PENDING:0, PROCESS:0, HOLD:0, DONE:0 };
+  let overdue = 0;
+  state.entries.forEach(e => {
+    counts[e.status] = (counts[e.status]||0) + 1;
+    if(isOverdue(e)) overdue++;
+  });
+  const el = document.getElementById('summaryStrip');
+  el.innerHTML = `
+    <div class="sum-card"><div class="n">${state.entries.length}</div><div class="l">total entries</div></div>
+    <div class="sum-card pending"><div class="n">${counts.PENDING}</div><div class="l">pending</div></div>
+    <div class="sum-card process"><div class="n">${counts.PROCESS||0}</div><div class="l">in process</div></div>
+    <div class="sum-card hold"><div class="n">${counts.HOLD}</div><div class="l">on hold</div></div>
+    <div class="sum-card done"><div class="n">${counts.DONE}</div><div class="l">done</div></div>
+    <div class="sum-card overdue"><div class="n">${overdue}</div><div class="l">overdue</div></div>
+  `;
+}
+
+function renderTracker(){
+  renderSummary();
+  const body = document.getElementById('trackerBody');
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+
+  let rows = state.entries.filter(e => {
+    if(activeFilter !== 'ALL' && e.status !== activeFilter) return false;
+    if(search && !(e.ref.toLowerCase().includes(search) || e.client.toLowerCase().includes(search))) return false;
+    return true;
+  });
+
+  document.getElementById('trackerEmpty').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('trackerTable').style.display = rows.length ? 'table' : 'none';
+
+  body.innerHTML = rows.map(e => {
+    const overdue = isOverdue(e);
+    const dueLabel = e.due ? fmtDate(e.due) : '—';
+    return `
+      <tr>
+        <td data-label="Assigned">${fmtDate(e.date)}</td>
+        <td data-label="PI / quotation"><span class="ref">${escapeHtml(e.ref)}</span></td>
+        <td data-label="Client"><span class="client-name">${escapeHtml(e.client)}</span></td>
+        <td data-label="Priority">${escapeHtml(e.priority || 'Medium')}</td>
+        <td data-label="Remarks">${escapeHtml(e.note) || '<span style="color:var(--ink-faint)">—</span>'}</td>
+        <td data-label="Due"><span class="age ${overdue?'warn':''}">${dueLabel}${overdue?' · overdue':''}</span></td>
+        <td data-label="Status">
+          <select class="status-select status-badge ${e.status}" onchange="updateStatus('${e.id}', this.value)">
+            <option value="PENDING" ${e.status==='PENDING'?'selected':''}>Pending</option>
+            <option value="PROCESS" ${e.status==='PROCESS'?'selected':''}>In process</option>
+            <option value="HOLD" ${e.status==='HOLD'?'selected':''}>On hold</option>
+            <option value="DONE" ${e.status==='DONE'?'selected':''}>Done</option>
+          </select>
+        </td>
+        <td class="no-label row-actions">
+          <button class="danger-ghost" onclick="deleteEntry('${e.id}')" aria-label="Delete entry"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ---------------- calls: add ---------------- */
+document.getElementById('addCallBtn').addEventListener('click', async () => {
+  const client = document.getElementById('c-client').value.trim();
+  const date = document.getElementById('c-date').value || todayISO();
+  const desc = document.getElementById('c-desc').value.trim();
+  const status = document.getElementById('c-status').value || 'PENDING';
+  const err = document.getElementById('c-error');
+
+  if(!client || !desc){
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  state.calls.unshift({ id: uid(), client, date, desc, status, createdAt: Date.now() });
+  await saveState();
+
+  document.getElementById('c-desc').value = '';
+  document.getElementById('c-date').value = todayISO();
+  document.getElementById('c-status').value = 'PENDING';
+  activeClient = client;
+
+  render();
+});
+
+async function deleteCall(id){
+  state.calls = state.calls.filter(c => c.id !== id);
+  await saveState(); render();
+}
+
+async function updateCallStatus(id, value){
+  const c = state.calls.find(c => c.id === id);
+  if(c){ c.status = value; await saveState(); render(); }
+}
+
+const CALL_STATUS_LABEL = { HOLD: 'To be done', PENDING: 'Pending', DONE: 'Done' };
+const ENTRY_STATUS_LABEL = { PENDING: 'Pending', PROCESS: 'In process', HOLD: 'On hold', DONE: 'Done' };
+let activeCallFilter = 'ALL';
+
+document.getElementById('callFilterRow').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  document.querySelectorAll('#callFilterRow .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  activeCallFilter = chip.dataset.callfilter;
+  renderCalls();
+});
+
+/* ---------------- render: calls ---------------- */
+function renderCalls(){
+  // Group every call under its client name (case/whitespace-insensitive), so
+  // "Al Fahad", "al fahad " etc. all land in the same thread.
+  const norm = s => (s||'').trim().toLowerCase();
+  const clients = {}; // normalized -> { display, count }
+  state.calls.forEach(c => {
+    const key = norm(c.client);
+    if(!clients[key]) clients[key] = { display: c.client.trim(), count: 0 };
+    clients[key].count++;
+  });
+  const clientKeys = Object.keys(clients).sort((a,b)=>clients[a].display.localeCompare(clients[b].display));
+
+  // datalist for autocomplete
+  document.getElementById('clientList').innerHTML = clientKeys.map(k=>`<option value="${escapeHtml(clients[k].display)}">`).join('');
+
+  const picker = document.getElementById('clientPicker');
+  const filterRow = document.getElementById('callFilterRow');
+  if(clientKeys.length === 0){
+    picker.innerHTML = '';
+    filterRow.style.display = 'none';
+  } else {
+    filterRow.style.display = 'flex';
+    if(!activeClient || !clients[norm(activeClient)]) activeClient = clients[clientKeys[0]].display;
+    picker.innerHTML = clientKeys.map(key => `
+      <div class="client-pill ${key===norm(activeClient)?'active':''}" onclick="selectClient('${escapeHtml(clients[key].display).replace(/'/g,"\\'")}')">
+        ${escapeHtml(clients[key].display)} <span class="count">${clients[key].count}</span>
+      </div>
+    `).join('');
+  }
+
+  const wrap = document.getElementById('callThreadWrap');
+  const refsWrap = document.getElementById('clientRefsWrap');
+  const emptyState = document.getElementById('callsEmpty');
+
+  if(state.calls.length === 0){
+    wrap.innerHTML = '';
+    refsWrap.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  // Same-name PI / quotation numbers for the selected client, pulled straight
+  // from the tracker, so they sit right under that client's call thread.
+  const refs = state.entries.filter(e => norm(e.client) === norm(activeClient));
+  if(refs.length){
+    refsWrap.innerHTML = `<div class="client-refs">
+      <span class="client-refs-label"><i class="ti ti-file-invoice" style="font-size:14px;vertical-align:-2px;margin-right:4px;"></i>PI / quotations for ${escapeHtml(activeClient)}:</span>
+      ${refs.map(e => `<span class="ref-pill status-badge ${e.status}">${escapeHtml(e.ref)} · ${ENTRY_STATUS_LABEL[e.status] || e.status}</span>`).join('')}
+    </div>`;
+  } else {
+    refsWrap.innerHTML = '';
+  }
+
+  let thread = state.calls
+    .filter(c => norm(c.client) === norm(activeClient))
+    .sort((a,b) => a.createdAt - b.createdAt);
+
+  if(activeCallFilter !== 'ALL'){
+    thread = thread.filter(c => (c.status || 'PENDING') === activeCallFilter);
+  }
+
+  if(thread.length === 0){
+    wrap.innerHTML = `<div class="empty-callstate"><i class="ti ti-phone" style="font-size:22px;display:block;margin-bottom:6px;"></i>No calls with this status yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="thread">` + thread.map((c, idx) => `
+    <div class="call-entry">
+      <div class="meta">
+        <span class="call-num">Call ${idx+1}</span>
+        <span>${fmtDate(c.date)}</span>
+        <select class="status-select status-badge ${c.status || 'PENDING'}" onchange="updateCallStatus('${c.id}', this.value)">
+          <option value="HOLD" ${c.status==='HOLD'?'selected':''}>To be done</option>
+          <option value="PENDING" ${(!c.status||c.status==='PENDING')?'selected':''}>Pending</option>
+          <option value="DONE" ${c.status==='DONE'?'selected':''}>Done</option>
+        </select>
+      </div>
+      <div class="desc">${escapeHtml(c.desc)}</div>
+      <div class="desc-actions">
+        <span onclick="deleteCall('${c.id}')">Delete</span>
+      </div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+function selectClient(name){
+  activeClient = name;
+  activeCallFilter = 'ALL';
+  document.querySelectorAll('#callFilterRow .chip').forEach(c => c.classList.remove('active'));
+  const allChip = document.querySelector('#callFilterRow .chip[data-callfilter="ALL"]');
+  if(allChip) allChip.classList.add('active');
+  renderCalls();
+}
+
+/* ---------------- master render ---------------- */
+function render(){
+  renderTracker();
+  renderCalls();
+}
+
+/* ---------------- notifications ---------------- */
+const notifyBtn = document.getElementById('notifyBtn');
+const notifyStatus = document.getElementById('notifyStatus');
+
+function refreshNotifyUI(){
+  if(!('Notification' in window)){
+    notifyBtn.style.display = 'none';
+    return;
+  }
+  if(Notification.permission === 'granted'){
+    notifyBtn.innerHTML = '<i class="ti ti-bell-ringing" style="font-size:15px;vertical-align:-2px;margin-right:4px;"></i>Notifications on';
+    notifyStatus.style.display = 'block';
+    notifyStatus.textContent = "You'll be notified here for overdue and due-today items while this tab is open.";
+  } else {
+    notifyBtn.innerHTML = '<i class="ti ti-bell" style="font-size:15px;vertical-align:-2px;margin-right:4px;"></i>Notify';
+  }
+}
+
+notifyBtn.addEventListener('click', async () => {
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted'){
+      new Notification('Export Desk', { body: 'Notifications turned on. You\'ll be alerted about overdue and due-today items.' });
+    }
+  }
+  refreshNotifyUI();
+});
+
+function checkDueNotifications(){
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const today = todayISO();
+  state.entries.forEach(e => {
+    if(e.status === 'DONE' || !e.due) return;
+    const isOverdueNow = e.due < today;
+    const isDueToday = e.due === today;
+    if((isOverdueNow || isDueToday) && !e.notified){
+      new Notification('Export Desk · ' + (isDueToday ? 'Due today' : 'Overdue'), {
+        body: `${e.ref} — ${e.client} (${e.status})`
+      });
+      e.notified = true;
+    }
+  });
+  saveState();
+}
+
+/* This tab checks on load and every 30 min while open — browsers don't allow
+   background page checks once the tab is fully closed. For a guaranteed daily
+   check, keep this tab open, or use the Backup button to save your data and
+   re-check when you reopen the page. */
+setInterval(checkDueNotifications, 30 * 60 * 1000);
+
+/* ---------------- backup / restore ---------------- */
+document.getElementById('backupBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `export-desk-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  document.getElementById('restoreFile').click();
+});
+document.getElementById('restoreFile').addEventListener('change', (ev) => {
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!confirm('This will replace your current tracker and call log with the backup file. Continue?')) return;
+      state.entries = parsed.entries || [];
+      state.calls = parsed.calls || [];
+      await saveState();
+      render();
+      alert('Backup restored.');
+    }catch(err){
+      alert('Could not read that file — make sure it is an Export Desk backup (.json).');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+});
+
+/* ---------------- init ---------------- */
+document.getElementById('todayLabel').textContent = fmtDate(todayISO());
+document.getElementById('f-date').value = todayISO();
+document.getElementById('c-date').value = todayISO();
+refreshNotifyUI();
+loadState().then(checkDueNotifications);
+</script>
+</body>
+</html>
